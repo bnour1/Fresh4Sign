@@ -1,0 +1,17 @@
+{
+  "platform-version": "3.0",
+  "modules": {
+    "service_ticket": {
+      "location": {
+        "ticket_sidebar": {
+          "url": "index.html",
+          "icon": "styles/images/icon.svg"
+        }
+      }
+    }
+  },
+  "engines": {
+    "node": "18.20.5",
+    "fdk": "9.3.1"
+  }
+}
