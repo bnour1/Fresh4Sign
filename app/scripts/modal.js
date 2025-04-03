@@ -268,22 +268,46 @@ function buildSignatariosForm() {
                     { id: "Não aplicavel", value: "Não aplicavel" }
                 ]
 
+            },
+            {
+                id: 'signatory_order',
+                name: 'signatory_order',
+                label: 'Posição da assinatura',
+                type: 'NUMBER',
+                required: true,
+                placeholder: 'Em qual ordem ele deve estar'
             }
         ]
     };
 
     const validationSchema = Yup.object().shape({
-        signatory_name: Yup.string().required('Nome do signatário é obrigatório'),
+        signatory_name: Yup.string()
+            .required('Nome do signatário é obrigatório'),
+
         signatory_cpf: Yup.string()
             .required('CPF é obrigatório')
             .test('valid-cpf-length', 'CPF deve conter 11 dígitos', value => {
                 const digits = (value || '').replace(/\D/g, '');
                 return digits.length === 11;
             }),
-        signatory_email: Yup.string().email('E-mail inválido').required('E-mail é obrigatório'),
-        signatory_type: Yup.string().required('Tipo de signatário é obrigatório'),
-        signature_type: Yup.string().required('Tipo de assinatura é obrigatório')
+
+        signatory_email: Yup.string()
+            .email('E-mail inválido')
+            .required('E-mail é obrigatório'),
+
+        signatory_type: Yup.string()
+            .required('Tipo de signatário é obrigatório'),
+
+        signature_type: Yup.string()
+            .required('Tipo de assinatura é obrigatório'),
+
+        signatory_order: Yup.number()
+            .typeError('A posição deve ser um número')
+            .required('A posição da assinatura é obrigatória')
+            .integer('A posição deve ser um número inteiro')
+            .min(1, 'A posição deve ser maior ou igual a 1'),
     });
+
 
 
     form.validationSchema = validationSchema;
