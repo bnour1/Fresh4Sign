@@ -15,12 +15,3 @@ html {
   align-items: center;
 }
 
-.drag-container {
-  width: 300px;
-  padding: 20px;
-  border: 1px solid black;
-}
-
-fw-drag-item {
-  margin-bottom: 8px;
-}

@@ -8,10 +8,27 @@
           "icon": "styles/images/icon.svg"
         }
       }
+    },
+    "common": {
+      "requests": {
+        "ViewTicket": {},
+        "ViewTicketRequestedItems": {},
+        "UploadDocumentBinary": {},
+        "UploadSlaveDocumentBinary": {},
+        "DownloadAttachment": {}
+      },
+      "functions": {
+        "uploadAttachmentToD4sign": {},
+        "uploadSecondaryAttachmentToD4sign": {}
+      }
     }
   },
   "engines": {
     "node": "18.20.5",
     "fdk": "9.3.1"
+  },
+  "dependencies": {
+    "axios": "0.21.1",
+    "form-data": "4.0.2"
   }
 }

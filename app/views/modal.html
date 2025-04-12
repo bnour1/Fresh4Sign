@@ -10,7 +10,7 @@
     <script defer src="../scripts/modal.js"></script>
     <script async type="module"
         src="https://cdn.jsdelivr.net/npm/@freshworks/crayons@v4/dist/crayons/crayons.esm.js"></script>
-    <link rel="stylesheet" type="text/css" href="styles/style.css" />
+    <link rel="stylesheet" type="text/css" href="../styles/style.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@freshworks/crayons@v4/css/crayons-min.css" />
     <script type="module">
         import * as Yup from 'https://cdn.skypack.dev/yup@0.32';
@@ -20,37 +20,43 @@
 
 <body>
     <section>
-        <div id="form-document">
-            <div>
-                <fw-drag-container class="drag-container" id="attachmentsSort">
-                </fw-drag-container>
-                <br>
-            </div>
+        <div id="form-document" class="fw-pr-28">
+
         </div>
-        <fw-accordion>
-            <fw-accordion-title
-                style="--fw-accordion-title-background-color: #F5F7F9; --fw-accordion-title-expanded-icon-color: #2C5CC5; --fw-accordion-title-collapsed-icon-color: #264966;
+        <div class="fw-pr-24">
+            <fw-accordion>
+                <fw-accordion-title
+                    style="--fw-accordion-title-background-color: #F5F7F9; --fw-accordion-title-expanded-icon-color: #2C5CC5; --fw-accordion-title-collapsed-icon-color: #264966;
       --fw-accordion-title-font-size: 14px; --fw-accordion-title-font-weight: 600; --fw-accordion-title-line-height: 20px;">
-                <fw-icon name="minus" size="14" slot="expanded-icon"></fw-icon>
-                <fw-icon name="plus" size="14" slot="collapsed-icon"></fw-icon>
-                Adicionar Signatário
-            </fw-accordion-title>
-            <fw-accordion-body>
-                <div id="form-signatarios">
-                    <fw-button color="secondary" style="display: block; margin-bottom:10px;"
-                        id="form-signatories-add">Adicionar Signatário</fw-button>
-                </div>
-            </fw-accordion-body>
-        </fw-accordion>
+                    <fw-icon name="minus" size="14" slot="expanded-icon"></fw-icon>
+                    <fw-icon name="plus" size="14" slot="collapsed-icon"></fw-icon>
+                    Adicionar Signatário
+                </fw-accordion-title>
+                <fw-accordion-body>
+                    <div id="form-signatarios" class="fw-pr-28">
+                        <fw-button color="secondary" style="display: block; margin-bottom:10px;"
+                            id="form-signatories-add">Adicionar Signatário</fw-button>
+                    </div>
+                </fw-accordion-body>
+            </fw-accordion>
+        </div>
         <br>
-        <fw-data-table show-settings="true" id="datatable-signatories" is-selectable="true" is-all-selectable="true"
-            label="Signatários">
-        </fw-data-table>
+        <div>
+            <fw-data-table show-settings="true" id="datatable-signatories" label="Signatários">
+            </fw-data-table>
+        </div>
         <br>
-        <fw-inline-message open="false" id="errorNoSign" type="error">Preencha ao menos um
-            signatário</fw-inline-message>
-        <fw-button id="form-document-submit">Enviar Documento</fw-button>
-        <fw-button color="secondary" class="fw-p-12" id="form-document-reset">Limpar</fw-button>
+        <div class="fw-card-1">
+            <fw-drag-container class="drag-container" id="attachmentsSort">
+            </fw-drag-container>
+        </div>
+        <br>
+        <div class="fw-justify-end fw-flex">
+            <fw-button color="secondary" class="fw-px-12" id="form-document-reset">Limpar</fw-button>
+            <fw-button id="form-document-submit">Enviar Documento</fw-button>
+        </div>
+        <br>
+        <div id="user_logs"></div>
     </section>
 </body>
 

@@ -1,1 +1,39 @@
-{}
+{
+    "freshservice_domain": {
+        "type": "text",
+        "display_name": "Domínio do Freshservice",
+        "description": "Exemplo: suaempresa.freshservice.com",
+        "required": true
+    },
+    "d4sign_domain": {
+        "type": "text",
+        "display_name": "Domínio do D4sign",
+        "description": "Exemplo: secure.d4sign.com",
+        "required": true
+    },
+    "api_key": {
+        "type": "text",
+        "display_name": "API Key do Freshservice",
+        "description": "Cole aqui sua API Key do Freshservice. Você pode encontrá-la em: Perfil → API Key",
+        "required": true,
+        "secure": true
+    },
+    "d4sign_token": {
+        "type": "text",
+        "display_name": "Token API (D4Sign)",
+        "description": "Seu Token de API da D4Sign",
+        "required": true
+    },
+    "d4sign_crypt": {
+        "type": "text",
+        "display_name": "Crypt Key (D4Sign)",
+        "description": "Chave criptográfica da D4Sign",
+        "required": true
+    },
+    "d4sign_uuid_safe": {
+        "type": "text",
+        "display_name": "UUID Cofre (D4Sign)",
+        "description": "UUID do Cofre da D4Sign",
+        "required": true
+    }
+}

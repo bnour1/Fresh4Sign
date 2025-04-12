@@ -1,0 +1,64 @@
+{
+    "ViewTicket": {
+        "schema": {
+            "method": "GET",
+            "protocol": "https",
+            "host": "<%= iparam.freshservice_domain %>",
+            "path": "/api/v2/tickets/<%= context.ticket_id %>",
+            "headers": {
+                "Authorization": "Basic <%= encode(iparam.api_key + ':X') %>",
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "ViewTicketRequestedItems": {
+        "schema": {
+            "method": "GET",
+            "protocol": "https",
+            "host": "<%= iparam.freshservice_domain %>",
+            "path": "/api/v2/tickets/<%= context.ticket_id %>/requested_items",
+            "headers": {
+                "Authorization": "Basic <%= encode(iparam.api_key + ':X') %>",
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "UploadDocumentBinary": {
+        "schema": {
+            "method": "POST",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= iparam.d4sign_uuid_safe %>/uploadbinary",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "UploadSlaveDocumentBinary": {
+        "schema": {
+            "method": "POST",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.uuid_doc_master %>/uploadslavebinary",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "DownloadAttachment": {
+        "schema": {
+            "method": "GET",
+            "protocol": "https",
+            "host": "ssabrhelpdesk.attachments.freshservice.com",
+            "path": "<%= context.path %>"
+        }
+    }
+}
