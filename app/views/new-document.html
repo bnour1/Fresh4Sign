@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Document</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script async src="{{{appclient}}}"></script>
+    <script defer src="../scripts/new-document.js"></script>
+    <script async type="module"
+        src="https://cdn.jsdelivr.net/npm/@freshworks/crayons@v4/dist/crayons/crayons.esm.js"></script>
+    <link rel="stylesheet" type="text/css" href="../styles/style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@freshworks/crayons@v4/css/crayons-min.css" />
+    <script type="module">
+        import * as Yup from 'https://cdn.skypack.dev/yup@0.32';
+        window.Yup = Yup;
+    </script>
+</head>
+
+<body>
+    <section>
+        <div id="form-document" class="fw-pr-28">
+        </div>
+        <div class="fw-card-1">
+            <fw-drag-container class="drag-container" id="attachmentsSort">
+            </fw-drag-container>
+        </div>
+        <br>
+        <div class="fw-justify-end fw-flex">
+            <fw-button color="secondary" class="fw-px-12" id="form-document-reset">Limpar</fw-button>
+            <fw-button id="form-document-submit">Criar Documento</fw-button>
+        </div>
+        <br>
+        <div id="user_logs"></div>
+    </section>
+</body>
+
+</html>

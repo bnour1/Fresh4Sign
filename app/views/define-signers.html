@@ -7,7 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script async src="{{{appclient}}}"></script>
-    <script defer src="../scripts/modal.js"></script>
+    <script defer src="../scripts/define-signers.js"></script>
     <script async type="module"
         src="https://cdn.jsdelivr.net/npm/@freshworks/crayons@v4/dist/crayons/crayons.esm.js"></script>
     <link rel="stylesheet" type="text/css" href="../styles/style.css" />
@@ -20,10 +20,8 @@
 
 <body>
     <section>
-        <div id="form-document" class="fw-pr-28">
-
         </div>
-        <div class="fw-pr-24">
+        <div>
             <fw-accordion>
                 <fw-accordion-title
                     style="--fw-accordion-title-background-color: #F5F7F9; --fw-accordion-title-expanded-icon-color: #2C5CC5; --fw-accordion-title-collapsed-icon-color: #264966;
@@ -44,11 +42,6 @@
         <div>
             <fw-data-table show-settings="true" id="datatable-signatories" label="Signatários">
             </fw-data-table>
-        </div>
-        <br>
-        <div class="fw-card-1">
-            <fw-drag-container class="drag-container" id="attachmentsSort">
-            </fw-drag-container>
         </div>
         <br>
         <div class="fw-justify-end fw-flex">

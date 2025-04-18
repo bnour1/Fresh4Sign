@@ -8,7 +8,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script async src="{{{appclient}}}"></script>
-  <script defer src="scripts/app.js"></script>
+  <script defer src="scripts/index.js"></script>
   <script async type="module"
     src="https://cdn.jsdelivr.net/npm/@freshworks/crayons@v4/dist/crayons/crayons.esm.js"></script>
   <link rel="stylesheet" type="text/css" href="styles/style.css" />
@@ -16,12 +16,33 @@
 </head>
 
 <body>
-  <div class="fw-flex fw-flex-column fw-mt-28">
-    <div class="fw-flex fw-gap-3 fw-flex-column">
-      <fw-button id="newDocumentButton" color="secondary"><fw-icon name="upload" size="16" slot="before-label"></fw-icon> Novo documento </fw-button>
-      <fw-button disabled=true color="primary"><fw-icon name="link" size="16" slot="before-label"></fw-icon>Acompanhar Documento</fw-button>
-      <fw-button disabled=true color="danger"><fw-icon name="cross-big" size="16" slot="before-label"></fw-icon>Cancelar Documento </fw-button>
+  <div class="fw-flex fw-justify-between fw-mb-16">
+    <fw-pill id="documentStatus" class=""></fw-pill>
+    <fw-button color="secondary" id="reloadButton" size="icon">
+      <fw-icon name="refresh" size="20"></fw-icon>
+    </fw-button>
+  </div>
+  <div class="fw-flex-row">
+    <!-- Conteúdo central (loader ou controles) -->
+    <div class="fw-flex fw-flex-column fw-justify-end fw-justify-content-center fw-flex-grow-1 fw-gap-4">
+      <!-- Loader inicial -->
+      <fw-progress-loader id="initialLoader" show="true" size="24"
+        loading-text="Carregando dados..."></fw-progress-loader>
+
+      <!-- Container dos botões e status (inicialmente oculto) -->
+      <div id="documentControls" class="fw-flex fw-flex-column fw-gap-2" style="display: none;">
+        <fw-button id="actionButton" color="secondary"></fw-button>
+
+        <fw-button id="cancelButton" color="danger" class="fw-mt-4">
+          <fw-icon name="cross-big" size="16" slot="before-label"></fw-icon>
+          Cancelar Documento
+        </fw-button>
+      </div>
     </div>
   </div>
 </body>
+
+
+
+
 </html>

@@ -23,27 +23,12 @@
             }
         }
     },
-    "UploadDocumentBinary": {
+    "TagDocumentOnD4sign": {
         "schema": {
             "method": "POST",
             "protocol": "https",
             "host": "<%= iparam.d4sign_domain %>",
-            "path": "/api/v1/documents/<%= iparam.d4sign_uuid_safe %>/uploadbinary",
-            "query": {
-                "tokenAPI": "<%= iparam.d4sign_token %>",
-                "cryptKey": "<%= iparam.d4sign_crypt %>"
-            },
-            "headers": {
-                "Content-Type": "application/json"
-            }
-        }
-    },
-    "UploadSlaveDocumentBinary": {
-        "schema": {
-            "method": "POST",
-            "protocol": "https",
-            "host": "<%= iparam.d4sign_domain %>",
-            "path": "/api/v1/documents/<%= context.uuid_doc_master %>/uploadslavebinary",
+            "path": "/api/v1/tags/<%= context.document_uuid %>/add",
             "query": {
                 "tokenAPI": "<%= iparam.d4sign_token %>",
                 "cryptKey": "<%= iparam.d4sign_crypt %>"
@@ -59,6 +44,36 @@
             "protocol": "https",
             "host": "ssabrhelpdesk.attachments.freshservice.com",
             "path": "<%= context.path %>"
+        }
+    },
+    "getDocumentOnD4sign": {
+        "schema": {
+            "method": "GET",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.document_uuid %>",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "cancelDocumentOnD4sign": {
+        "schema": {
+            "method": "POST",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.document_uuid %>/cancel",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
         }
     }
 }

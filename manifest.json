@@ -13,8 +13,9 @@
       "requests": {
         "ViewTicket": {},
         "ViewTicketRequestedItems": {},
-        "UploadDocumentBinary": {},
-        "UploadSlaveDocumentBinary": {},
+        "TagDocumentOnD4sign": {},
+        "getDocumentOnD4sign": {},
+        "cancelDocumentOnD4sign": {},
         "DownloadAttachment": {}
       },
       "functions": {
