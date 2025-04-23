@@ -16,11 +16,23 @@
         "TagDocumentOnD4sign": {},
         "getDocumentOnD4sign": {},
         "cancelDocumentOnD4sign": {},
-        "DownloadAttachment": {}
+        "DownloadAttachment": {},
+        "addDocumentSignersOnD4sign": {},
+        "listDocumentSignersOnD4sign": {},
+        "removeDocumentSignerOnD4sign": {},
+        "sendDocumentOnD4sign": {}
       },
       "functions": {
         "uploadAttachmentToD4sign": {},
         "uploadSecondaryAttachmentToD4sign": {}
+      },
+      "events": {
+        "onAppInstall": {
+          "handler": "onAppInstallHandler"
+        },
+        "onExternalEvent": {
+          "handler": "onExternalEventHandler"
+        }
       }
     }
   },

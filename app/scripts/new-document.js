@@ -1,114 +1,96 @@
 /********************************************************************************
- * FRESH D4Sign - Aplicação modular para envio e gerenciamento de documentos
+ * FRESH D4Sign – Tela “Novo Documento” (new-document.js)
  * ------------------------------------------------------------------------------
- * Refatorada com event handlers segmentados em funções menores, seguindo
- * princípios de código limpo e design modular, mas mantendo toda a lógica
- * no mesmo arquivo.
+ * Arquitetura alinhada ao index.js, seguindo o princípio da responsabilidade
+ * única, com lógica de aplicação isolada na classe NewDocumentApp e binding de
+ * eventos realizado externamente em bindEventListeners().
  ********************************************************************************/
 
-class FreshD4SignApp {
-    /**
-     * ############################################################################
-     *                           Variáveis de Instância
-     * ############################################################################
-     */
+class NewDocumentApp {
     constructor() {
-        // Objetos principais
+        /** Client FW SDK */
         this.client = null;
+        /** Contexto do iframe */
+        this.context = null;
+        /** Ticket corrente */
         this.ticket = null;
-        this.agent = null;
-        this.context = null
-
-        // Componentes de Formulário
+        /** Componente <fw-form> gerado dinamicamente */
         this.docForm = null;
     }
 
-    /**
-     * ############################################################################
-     *                                Inicialização
-     * ############################################################################
-     */
-    async init() {
+    /***********************************
+     * Inicialização
+     ***********************************/
+    async initializeClient() {
         try {
             this.client = await app.initialized();
-            this.context = await this.client.instance.context();
-            this.ticket = this.context.data.ticket
-
-            // Carrega anexos do ticket
-            try {
-                this.ticket.attachments = await this._fetchTicketAttachments(
-                    this.ticket.display_id
-                );
-            } catch (error) {
-                await this._showError(error.message);
-            }
-
-            // Cria e renderiza formulários
-            this.docForm = await this._createDocumentForm();
-            document.querySelector("#form-document").prepend(this.docForm);
-
-            // Registra os listeners de evento
-            this._registerEventListeners();
         } catch (error) {
-            console.error("Erro na inicialização do aplicativo:", error);
-            await this._showError(error.message);
+            console.log("Erro ao carregar client:", error);
+            await this.notifyError("Erro ao carregar client");
         }
     }
 
-    /**
-     * ############################################################################
-     *                               MÉTODOS DE DADOS
-     * ############################################################################
-     */
-
-    /**
-     * Busca anexos do ticket chamando templates de request do Freshworks.
-     * @param {number} ticketId - O display_id do ticket.
-     * @returns {Promise<Array>} Retorna um array de anexos.
-     */
-    async _fetchTicketAttachments(ticketId) {
+    async loadContext() {
         try {
-            const [ticketResponse, requestedItemsResponse] = await Promise.all([
+            this.context = await this.client.instance.context();
+            this.ticket = this.context.data.ticket;
+        } catch (error) {
+            console.log("Erro ao obter contexto:", error);
+            await this.notifyError("Erro ao obter informações do ticket");
+        }
+    }
+
+    async loadTicketAttachments() {
+        try {
+            const [ticketResponse, itemsResponse] = await Promise.all([
                 this.client.request.invokeTemplate("ViewTicket", {
-                    context: { ticket_id: ticketId },
+                    context: { ticket_id: this.ticket.display_id },
                 }),
                 this.client.request.invokeTemplate("ViewTicketRequestedItems", {
-                    context: { ticket_id: ticketId },
+                    context: { ticket_id: this.ticket.display_id },
                 }),
             ]);
 
             const ticketData = JSON.parse(ticketResponse.response);
-            const requestedItemsData = JSON.parse(requestedItemsResponse.response);
+            const itemsData = JSON.parse(itemsResponse.response);
 
-            const ticketAttachments = ticketData.ticket?.attachments || [];
-            const requestedItems = requestedItemsData.requested_items || [];
-            const requestedItemsAttachments = requestedItems.flatMap(
-                (item) => item.attachments || []
+            const ticketAttachments = ticketData.ticket?.attachments ?? [];
+            const itemsAttachments = (itemsData.requested_items ?? []).flatMap(
+                (item) => item.attachments ?? []
             );
 
-            return [...ticketAttachments, ...requestedItemsAttachments];
+            this.ticket.attachments = [...ticketAttachments, ...itemsAttachments];
         } catch (error) {
             console.log(error);
-            throw new Error(
-                `Não foi possível recuperar os anexos do ticket. Código de status: ${error.status}`
-            );
+            throw new Error(`Não foi possível recuperar os anexos do ticket. Código de status: ${error.status}`);
         }
     }
 
-    /**
-     * ############################################################################
-     *                              MÉTODOS DE FORMULÁRIO
-     * ############################################################################
-     */
+    async setupForm() {
+        this.docForm = await this.createDocumentForm();
+        document.querySelector("#form-document").prepend(this.docForm);
+    }
 
-    /**
-     * Cria o Formulário de Documento (docForm).
-     * @returns {HTMLElement} fw-form configurado.
-     */
-    async _createDocumentForm() {
+    /** Pipeline de boot da tela */
+    async init() {
+        await this.initializeClient();
+        await this.loadContext();
+
+        try {
+            await this.loadTicketAttachments();
+        } catch (err) {
+            await this.notifyError(err.message);
+        }
+
+        await this.setupForm();
+    }
+
+    /***********************************
+     * Criação do formulário
+     ***********************************/
+    async createDocumentForm() {
         const form = document.createElement("fw-form");
 
-        // Define o schema do formulário
         const schema = {
             name: "Document Form",
             fields: [
@@ -129,7 +111,7 @@ class FreshD4SignApp {
                     position: 2,
                     required: true,
                     placeholder: "Adicione o arquivo principal do documento",
-                    choices: await this._generateAttachmentChoices(this.ticket.attachments),
+                    choices: await this.generateAttachmentChoices(this.ticket.attachments),
                 },
                 {
                     id: "document_secondary_attachments",
@@ -138,271 +120,171 @@ class FreshD4SignApp {
                     type: "MULTI_SELECT",
                     position: 3,
                     required: false,
-                    placeholder:
-                        "Os anexos serão adicionados na ordem em que forem selecionados",
+                    placeholder: "Os anexos serão adicionados na ordem em que forem selecionados",
                     disabled: true,
                     choices: [],
                 },
             ],
         };
 
-        // Valores iniciais
         const initialValues = {
             document_name: `#REQ-${this.ticket.display_id} - Contrato de ${this.ticket.subject} - SSA x `,
         };
 
-        // Validação Yup
         const validationSchema = Yup.object().shape({
             document_name: Yup.string().required("Nome do contrato é obrigatório"),
-            document_main_attachment: Yup.string().required(
-                "Anexo principal é obrigatório"
-            ),
+            document_main_attachment: Yup.string().required("Anexo principal é obrigatório"),
         });
 
-        // Normaliza campos
-        schema.fields = schema.fields.map(this._normalizeFormField);
+        schema.fields = schema.fields.map(this.normalizeFormField);
 
-        // Atribuição ao componente
         form.formSchema = schema;
         form.initialValues = initialValues;
         form.validationSchema = validationSchema;
 
-        // Desabilita anexos secundários até que um anexo principal seja selecionado
+        // Campo de anexos secundários inicia desabilitado
         form.setDisabledFields({ document_secondary_attachments: true });
 
         return form;
     }
 
-    /**
-     * ############################################################################
-     *                        LISTENERS E SUB-FUNÇÕES DE EVENTO
-     * ############################################################################
-     */
-
-    /**
-     * Registra todos os listeners de evento. Cada listener aponta para métodos
-     * específicos que tratam apenas aquela mudança.
-     */
-    _registerEventListeners() {
-        // → Formulário de Documento
-        this.docForm.addEventListener("fwFormValueChanged", (evt) =>
-            this._handleDocumentFormChange(evt)
-        );
-
-        // → Botão "Enviar Documento"
-        document
-            .querySelector("#form-document-submit")
-            .addEventListener("click", (e) => this._onSubmitDocument(e));
-
-        // → Botão "Reset Document"
-        document
-            .querySelector("#form-document-reset")
-            .addEventListener("click", (e) => this._onResetDocument(e));
-    }
-
-    /**
-     * Trata o evento de mudança no Formulário de Documento.
-     */
-    _handleDocumentFormChange({ detail }) {
+    /***********************************
+     * Manipulação de formulário
+     ***********************************/
+    handleDocumentFormChange({ detail }) {
         const { field, value } = detail;
         const container = document.getElementById("attachmentsSort");
 
-        // Se o anexo principal mudar...
         if (field === "document_main_attachment") {
-            this._onMainAttachmentChange(container, value);
+            this.onMainAttachmentChange(container, value);
         }
 
-        // Se os anexos secundários mudarem...
         if (field === "document_secondary_attachments") {
-            this._onSecondaryAttachmentsChange(container, value);
+            this.onSecondaryAttachmentsChange(container, value);
         }
     }
 
-    /**
-     * Lida especificamente com a mudança do "anexo principal".
-     */
-    async _onMainAttachmentChange(container, value) {
+    async onMainAttachmentChange(container, value) {
         container.innerHTML = "";
 
         if (value) {
-            // Habilita e atualiza os anexos secundários
-            const filteredAttachments = this.ticket.attachments.filter(
-                (att) => att.id !== value
-            );
-            const updatedChoices = this._generateAttachmentChoices(filteredAttachments);
+            // Habilita e preenche os anexos secundários
+            const filtered = this.ticket.attachments.filter((att) => att.id !== value);
+            const choices = this.generateAttachmentChoices(filtered);
 
-            await this.docForm.setDisabledFields({
-                document_secondary_attachments: false,
-            });
-            await this.docForm.setFieldChoices(
-                "document_secondary_attachments",
-                updatedChoices
-            );
+            await this.docForm.setDisabledFields({ document_secondary_attachments: false });
+            await this.docForm.setFieldChoices("document_secondary_attachments", choices);
 
-            // Cria item fixo do anexo principal
-            const mainAttachment = this.ticket.attachments.find(
-                (att) => att.id === value
-            );
-            container.appendChild(this._createAttachmentDragItem(mainAttachment, true));
+            // Item fixo do anexo principal
+            const main = this.ticket.attachments.find((att) => att.id === value);
+            container.appendChild(this.createAttachmentDragItem(main, true));
         } else {
-            // Desabilita e limpa os anexos secundários
-            await this.docForm.setDisabledFields({
-                document_secondary_attachments: true,
-            });
+            await this.docForm.setDisabledFields({ document_secondary_attachments: true });
             await this.docForm.setFieldChoices("document_secondary_attachments", []);
         }
     }
 
-    /**
-     * Lida especificamente com a mudança dos anexos secundários.
-     */
-    _onSecondaryAttachmentsChange(container, value) {
+    onSecondaryAttachmentsChange(container, values) {
         const existingMain = container.querySelector('fw-drag-item[pinned="top"]');
-        const secondaryValues = value || [];
-
         container.innerHTML = "";
-        if (existingMain) {
-            container.appendChild(existingMain);
-        }
+        if (existingMain) container.appendChild(existingMain);
 
-        secondaryValues.forEach((secName) => {
+        (values || []).forEach((secName) => {
             const attachment = this.ticket.attachments.find((att) => att.name === secName);
-            if (attachment) {
-                container.appendChild(this._createAttachmentDragItem(attachment));
-            }
+            if (attachment) container.appendChild(this.createAttachmentDragItem(attachment));
         });
     }
-    /**
-     * Lida com o envio do Documento (clique em "Enviar Documento").
-     */
-    async _onSubmitDocument(e) {
+
+    /***********************************
+     * Ações (botões)
+     ***********************************/
+    async submitDocument(e) {
         try {
             const { values, isValid } = await this.docForm.doSubmit(e);
-            e.target.setAttribute("loading", true);
-            if (isValid) {
-                const { response } = await this._submitDocumentFlow(values, e.target);
-                //const { response } = { response: { uuid: "4b0389e3-d3de-4b2a-bfe3-6a8649a116d0" }, values: values }
-                if (response.uuid) {
-                    try {
-                        await this.client.instance.send({
-                            message: "DOCUMENT_CREATED"
-                        });
-                    } catch (error) {
-                        console.error(error);
-                    }
-                    this.client.instance.close()
+            if (!isValid) return;
+
+            const { response } = await this.submitDocumentFlow(values);
+            if (response?.uuid) {
+                try {
+                    await this.client.instance.send({ message: "DOCUMENT_CREATED" });
+                } catch (err) {
+                    console.error(err);
                 }
+                this.client.instance.close();
             }
         } catch (error) {
             console.error("Erro no envio:", error);
-            await this._showError(
-                error.message || "Erro inesperado",
-                "Erro ao enviar documento"
-            );
-        } finally {
-            e.target.setAttribute("loading", false);
+            await this.notifyError(error.message || "Erro inesperado", "Erro ao enviar documento");
         }
     }
 
-    /**
-     * Fluxo completo de envio de documento: principal e anexos secundários.
-     */
-    async _submitDocumentFlow(values) {
+    async submitDocumentFlow(values) {
+        const main = this.ticket.attachments.find((att) => att.id === values.document_main_attachment);
+        const finalName = this.buildFilenameWithExtension(values.document_name, main.name);
 
-        const mainAttachment = this.ticket.attachments.find(
-            (att) => att.id === values.document_main_attachment
-        );
-
-        const finalName = this._buildFilenameWithExtension(values.document_name, mainAttachment.name);
         const container = document.getElementById("user_logs");
+        const inline = document.createElement("fw-inline-message");
+        inline.setAttribute("open", "");
+        inline.setAttribute("type", "info");
+        inline.setAttribute("duration", "Infinity");
+        inline.innerText = "Iniciando envio do documento principal...";
+        container.appendChild(inline);
 
-        // Mensagem inline
-        const inlineMessage = document.createElement("fw-inline-message");
-        inlineMessage.setAttribute("open", "");
-        inlineMessage.setAttribute("type", "info");
-        inlineMessage.setAttribute("duration", "Infinity");
-        inlineMessage.innerText = "Iniciando envio do documento principal...";
-        container.appendChild(inlineMessage);
-
-        // Loader de progresso
         const loader = document.createElement("fw-progress-loader");
         loader.setAttribute("parent", "#user_logs");
         container.appendChild(loader);
 
-        const startProgress = () => loader.start();
-        const endProgress = () => loader.done();
+        const start = () => loader.start();
+        const done = () => loader.done();
 
         try {
-            startProgress();
-            // Envia o anexo principal
+            start();
             const result = await this.client.request.invoke("uploadAttachmentToD4sign", {
-                attachment_url: mainAttachment.attachment_url,
-                mime_type: mainAttachment.content_type,
+                attachment_url: main.attachment_url,
+                mime_type: main.content_type,
                 name: finalName,
             });
 
             const uuid = result.response.uuid;
-            inlineMessage.setAttribute("type", "success");
-            inlineMessage.innerText = `✅ Documento principal enviado. UUID: ${uuid}`;
-            endProgress();
+            inline.setAttribute("type", "success");
+            inline.innerText = `✅ Documento principal enviado. UUID: ${uuid}`;
+            done();
 
-            // Envia anexos secundários
-            await this._submitSecondaryAttachments(
-                values.document_secondary_attachments || [],
-                uuid,
-                inlineMessage,
-                loader
-            );
+            await this.submitSecondaryAttachments(values.document_secondary_attachments || [], uuid, inline, loader);
 
-            startProgress();
+            start();
+            await this.client.db.set(`ticket:${this.ticket.display_id}`, { document_uuid: uuid });
+            done();
 
-            await this.client.db.set(`ticket:${this.ticket.display_id}`, { "document_uuid": uuid }).then(
-                function (data) {
-                    console.log(data)
-                    if (data.Created) {
-                        inlineMessage.setAttribute("type", "success");
-                        inlineMessage.innerText = `✅ UUID: ${uuid} Registrado no banco de dados`;
-                    }
-                });
+            await this.notifySuccess("Documento Criado 🙂", `${values.document_name} está pronto para receber assinaturas`);
 
-            endProgress();
+            inline.setAttribute("type", "success");
+            inline.innerText = "✅ Todos os anexos foram processados com sucesso.";
+            done();
 
-            // Conclusão
-            await this._showSuccess(
-                "Documento Criado 🙂",
-                `${values.document_name} está pronto para receber assinaturas`
-            );
-
-            inlineMessage.setAttribute("type", "success");
-            inlineMessage.innerText = "✅ Todos os anexos foram processados com sucesso.";
-            endProgress();
-
-            await new Promise(resolve => setTimeout(resolve, 3000))
-
-            inlineMessage.remove();
+            await new Promise((r) => setTimeout(r, 3000));
+            inline.remove();
             loader.remove();
 
-            return result
-
-        } catch (error) {
-            endProgress();
-            inlineMessage.setAttribute("type", "error");
-            inlineMessage.innerText = `❌ Erro ao enviar documento principal: ${error.message}`;
-            await this._showError(error.message, "Algo deu errado 🥲");
+            return result;
+        } catch (err) {
+            done();
+            inline.setAttribute("type", "error");
+            inline.innerText = `❌ Erro ao enviar documento principal: ${err.message}`;
+            await this.notifyError(err.message, "Algo deu errado 🥲");
+            throw err;
         }
     }
 
-    /**
-     * Envia os anexos secundários para o servidor D4sign.
-     */
-    async _submitSecondaryAttachments(secondaryAttachments, uuid, inlineMessage, loader) {
-        for (const name of secondaryAttachments) {
+    async submitSecondaryAttachments(list, uuid, inline, loader) {
+        for (const name of list) {
             const att = this.ticket.attachments.find((a) => a.name === name);
+            const finalName = this.normalizeFilename(att.name);
 
-            inlineMessage.setAttribute("type", "info");
-            const finalName = this._normalizeFilename(att.name)
-            inlineMessage.innerText = `📎 Enviando anexo secundário: ${finalName}`;
+            inline.setAttribute("type", "info");
+            inline.innerText = `📎 Enviando anexo secundário: ${finalName}`;
             loader.start();
+            const done = () => loader.done();
 
             try {
                 await this.client.request.invoke("uploadSecondaryAttachmentToD4sign", {
@@ -411,109 +293,100 @@ class FreshD4SignApp {
                     uuid_document: uuid,
                 });
 
-                inlineMessage.setAttribute("type", "success");
-                inlineMessage.innerText = `✅ Anexo "${finalName}" enviado com sucesso.`;
+                inline.setAttribute("type", "success");
+                inline.innerText = `✅ Anexo ${finalName} enviado com sucesso.`;
             } catch (err) {
-                inlineMessage.setAttribute("type", "error");
-                inlineMessage.innerText = `❌ Erro ao enviar "${att.name}": ${err.message}`;
+                inline.setAttribute("type", "error");
+                inline.innerText = `❌ Erro ao enviar ${att.name}: ${err.message}`;
             }
 
-            loader.done();
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            done();
+            await new Promise((r) => setTimeout(r, 2000));
         }
     }
 
-    /**
-     * Lida com o reset do formulário (clique em "Reset Document").
-     */
-    _onResetDocument(e) {
+    resetDocument(e) {
         this.docForm.doReset(e);
     }
 
-    /**
-     * ############################################################################
-     *                           MÉTODOS UTILITÁRIOS
-     * ############################################################################
-     */
-
-    _normalizeFormField(field) {
+    /***********************************
+     * Utilitários
+     ***********************************/
+    normalizeFormField(field) {
         if (["DROPDOWN", "MULTI_SELECT"].includes(field.type)) {
-            field.choices = field.choices.map((choice) => ({
-                ...choice,
-                text: choice.value,
-                value: choice.id,
-            }));
+            field.choices = field.choices.map((c) => ({ ...c, text: c.value, value: c.id }));
         }
         return field;
     }
 
-    _generateAttachmentChoices(attachments) {
-        return attachments.map((att) => ({
-            id: att.id,
-            value: att.name,
-            text: att.name,
-        }));
+    generateAttachmentChoices(attachments) {
+        return attachments.map((att) => ({ id: att.id, value: att.name, text: att.name }));
     }
 
-    _createAttachmentDragItem(attachment, pinned = false) {
+    createAttachmentDragItem(att, pinned = false) {
         const item = document.createElement("fw-drag-item");
-        item.id = attachment.id;
+        item.id = att.id;
         item.setAttribute("show-drag-icon", false);
         if (pinned) item.setAttribute("pinned", "top");
-        item.innerText = attachment.name;
+        item.innerText = att.name;
         return item;
     }
 
-    async _showError(message, title = "Erro") {
-        await this.client.interface.trigger("showNotify", {
-            type: "error",
-            title,
-            message,
-        });
+    buildFilenameWithExtension(customName, originalFilename) {
+        const idx = originalFilename.lastIndexOf(".");
+        const ext = idx !== -1 ? originalFilename.substring(idx) : "";
+        return `${customName.trim()}${ext}`;
     }
 
-    async _showSuccess(title, message) {
-        await this.client.interface.trigger("showNotify", {
-            type: "success",
-            title,
-            message,
-        });
+    normalizeFilename(raw) {
+        const dot = raw.lastIndexOf(".");
+        const ext = dot !== -1 ? raw.substring(dot) : "";
+        const base = (dot !== -1 ? raw.substring(0, dot) : raw)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9-_]/g, "_")
+            .substring(0, 100);
+        return `${base}${ext}`;
     }
 
-    _buildFilenameWithExtension(customName, originalFilename) {
-        // localiza o último ponto
-        const lastDotIndex = originalFilename.lastIndexOf('.');
-        if (lastDotIndex !== -1) {
-            // extrai extensão (".pdf", ".docx", etc.)
-            const extension = originalFilename.substring(lastDotIndex);
-            // concatena, removendo espaços extras no final do customName
-            return customName.trim() + extension;
-        }
-        // se não encontrar ponto, retorne só o customName
-        // ou force algo como ".pdf" se preferir
-        return customName;
+    async notifyError(message, title = "Erro") {
+        await this.client.interface.trigger("showNotify", { type: "error", title, message });
     }
 
-    _normalizeFilename(rawName) {
-        const ext = rawName.includes('.') ? rawName.substring(rawName.lastIndexOf('.')) : '';
-        const base = rawName.replace(ext, '');
-
-        const normalized = base
-            .normalize('NFD')                       // Remove acentos
-            .replace(/[\u0300-\u036f]/g, '')       // Remove caracteres combinantes
-            .replace(/[^a-zA-Z0-9-_]/g, '_')       // Substitui tudo que não é alfanumérico por "_"
-            .substring(0, 100);                    // Limita a 100 caracteres
-
-        return `${normalized}${ext}`;
+    async notifySuccess(title, message) {
+        await this.client.interface.trigger("showNotify", { type: "success", title, message });
     }
 }
 
-/**
- * ############################################################################
- *                           EXECUÇÃO DA APLICAÇÃO
- * ############################################################################
- */
+/***********************************
+ * Helpers externos
+ ***********************************/
+function setLoading(button, isLoading) {
+    if (!button) return;
+    isLoading ? button.setAttribute("loading", true) : button.removeAttribute("loading");
+}
+
+function bindEventListeners(app) {
+    // Mudanças no formulário
+    app.docForm.addEventListener("fwFormValueChanged", (evt) => app.handleDocumentFormChange(evt));
+
+    // Enviar documento
+    document.getElementById("form-document-submit").addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        setLoading(btn, true);
+        await app.submitDocument(e);
+        setLoading(btn, false);
+    });
+
+    // Resetar formulário
+    document.getElementById("form-document-reset").addEventListener("click", (e) => app.resetDocument(e));
+}
+
+/***********************************
+ * Bootstrap
+ ***********************************/
 (async () => {
-    const appInstance = new FreshD4SignApp();
-    await appInstance.init();
+    const app = new NewDocumentApp();
+    await app.init();
+    bindEventListeners(app);
 })();

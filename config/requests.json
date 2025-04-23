@@ -75,5 +75,65 @@
                 "Content-Type": "application/json"
             }
         }
+    },
+    "addDocumentSignersOnD4sign": {
+        "schema": {
+            "method": "POST",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.document_uuid %>/createlist",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "listDocumentSignersOnD4sign": {
+        "schema": {
+            "method": "GET",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.document_uuid %>/list",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "removeDocumentSignerOnD4sign": {
+        "schema": {
+            "method": "POST",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.document_uuid %>/removeemaillist",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
+    },
+    "sendDocumentOnD4sign": {
+        "schema": {
+            "method": "POST",
+            "protocol": "https",
+            "host": "<%= iparam.d4sign_domain %>",
+            "path": "/api/v1/documents/<%= context.document_uuid %>/sendtosigner",
+            "query": {
+                "tokenAPI": "<%= iparam.d4sign_token %>",
+                "cryptKey": "<%= iparam.d4sign_crypt %>"
+            },
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        }
     }
 }

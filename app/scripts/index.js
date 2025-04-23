@@ -1,251 +1,347 @@
 /********************************************************************************
  * FRESH D4Sign - Tela principal (index.js)
- * ------------------------------------------------------------------------------
- * Refatorado para manter clareza entre init e carregamento de estado, e aplicar
- * loading visual em botões de ação. Compatível com a UI atual.
  ********************************************************************************/
+
+const AppUIState = Object.freeze({
+  NEW: "NEW",
+  DRAFT: "DRAFT",
+  READY: "READY",
+  SIGNING: "SIGNING",
+  DONE: "DONE",
+  UNKNOWN: "UNKNOWN"
+});
 
 class App {
   constructor() {
     this.client = null;
     this.ticket = null;
     this.document = null;
+    this.documentLoadFailed = false;
+
   }
 
-  async init() {
-    try {
-      await this._loadClient();
-      this._addEventListeners();
-    } catch (error) {
-      console.log("Erro ao inicializar o app index:", error);
-    }
-  }
-
-  _addEventListeners() {
-    this.client.events.on("app.activated", async () => {
-      this._renderText();
-      await this._loadAndRenderState();
-    });
-
-    document.getElementById("reloadButton").addEventListener("click", async (e) => {
-      const button = e.currentTarget;
-      button.setAttribute("loading", true);
-      await this._loadAndRenderState();
-      button.removeAttribute("loading");
-    });
-
-    document.getElementById("actionButton").addEventListener("click", async (e) => {
-      const button = e.currentTarget;
-      button.setAttribute("loading", true);
-
-      if (!this.document) {
-        await this._openNewDocumentModal();
-      } else if (this.document.statusId === "2") {
-        await this._openSignersModal();
-      } else {
-        await this._openTrackingModal?.(); // opcional
-      }
-
-      button.removeAttribute("loading");
-    });
-
-    document.getElementById("cancelButton").addEventListener("click", async (e) => {
-      const button = e.currentTarget;
-      button.setAttribute("loading", true);
-      await this._cancelDocument();
-      button.removeAttribute("loading");
-    });
-
-    this.client.instance.receive(async (event) => {
-      console.log("Evento recebido:", event);
-
-      if (event.data === "DOCUMENT_CREATED") {
-        await this._loadAndRenderState();
-        await this._openSignersModal();
-      }
-    });
-  }
-
-  async _openNewDocumentModal() {
-    try {
-      await this.client.interface.trigger("showModal", {
-        title: "Novo Contrato",
-        template: "views/new-document.html",
-        data: { ticket: this.ticket }
-      });
-    } catch (error) {
-      console.log("Erro ao abrir modal de novo contrato:", error);
-      await this._showError("Erro ao abrir modal de novo contrato");
-    }
-  }
-
-  async _openSignersModal() {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      await this.client.interface.trigger("showModal", {
-        title: "Signatários",
-        template: "views/define-signers.html",
-        data: { document: this.document },
-      });
-    } catch (error) {
-      console.log("Erro ao abrir modal de signatários:", error);
-      await this._showError("Erro ao abrir modal de signatários");
-    }
-  }
-
-  _renderText() {
-    console.log("Fresh4Sign: Cliente iniciado com sucesso", this.client);
-  }
-
-  async _loadClient() {
+  /***********************************
+   * Inicialização
+   ***********************************/
+  async initializeClient() {
     try {
       this.client = await app.initialized();
     } catch (error) {
       console.log("Erro ao carregar client:", error);
-      await this._showError("Erro ao carregar client");
+      await this.notifyError("Erro ao carregar client");
     }
   }
 
-  async _loadTicketData() {
+  /***********************************
+   * Ações de interface
+   ***********************************/
+  async openModal(modalName, data = {}) {
+    try {
+      const modalMap = {
+        newDocument: {
+          title: "Novo Contrato",
+          template: "views/new-document.html"
+        },
+        draftDocument: {
+          title: "Signatários",
+          template: "views/draft-document.html"
+        },
+        trackDocument: {
+          title: "Detalhes do Documento",
+          template: "views/track-document.html"
+        }
+      };
+
+      const modal = modalMap[modalName];
+      if (!modal) throw new Error(`Modal "${modalName}" não está definido.`);
+
+      await this.client.interface.trigger("showModal", {
+        title: modal.title,
+        template: modal.template,
+        data
+      });
+    } catch (error) {
+      console.log(`Erro ao abrir modal "${modalName}":`, error);
+      await this.notifyError(`Erro ao abrir "${modalName}"`);
+    }
+  }
+
+  /***********************************
+   * Carregamento de dados
+   ***********************************/
+  async loadTicketData() {
     try {
       const data = await this.client.data.get("ticket");
       this.ticket = data.ticket;
     } catch (error) {
       console.log("Erro ao carregar dados do ticket:", error);
-      await this._showError("Erro ao carregar dados do ticket");
+      await this.notifyError("Erro ao carregar dados do ticket");
     }
   }
 
-  async _loadDocument() {
+  async loadLinkedDocument() {
     try {
-      const key = `ticket:${this.ticket.display_id}`;
-      const dbData = await this.client.db.get(key);
+      const dbData = await this.client.db.get(this.documentKey);
 
-      if (!dbData?.document_uuid) return;
+      if (!dbData?.document_uuid) {
+        this.document = null;
+        return;
+      }
 
       const response = await this.client.request.invokeTemplate("getDocumentOnD4sign", {
         context: { document_uuid: dbData.document_uuid }
       });
 
       const [document] = JSON.parse(response.response);
-      console.log("Documento encontrado:", document);
-
-      if (document.statusId === "6") {
-        console.log("Documento cancelado. Limpando vínculo do ticket.");
-        const deletion = await this.client.db.delete(key);
-        if (deletion?.Deleted) {
-          this.document = null;
-          console.log("Vínculo removido do DB com sucesso.");
-        }
-      } else {
-        this.document = document;
-      }
+      this.document = document;
 
     } catch (error) {
       if (error.status !== 404) {
-        console.log("Erro ao carregar documento vinculado:", error);
-        await this._showError("Erro ao buscar documento na D4Sign");
+        this.documentLoadFailed = true;
+        await this.notifyError("Ocorreu um problema ao tentar se comunicar com a D4sign");
+        await this.notifyError(error.message);
       }
     }
   }
 
-  async _cancelDocument() {
+  /***********************************
+   * Cancelamento e desvinculação
+   ***********************************/
+  async cancelDocument() {
     try {
       const data = await this.client.request.invokeTemplate("cancelDocumentOnD4sign", {
         context: { document_uuid: this.document.uuidDoc }
       });
+
       const [document] = JSON.parse(data.response);
       console.log(document);
 
       if (document.statusId === 6) {
-        await this._showSuccess(`${document.nameDoc} foi cancelado com sucesso`)
-        await this._loadAndRenderState();
+        await this.notifySuccess(`${document.nameDoc} foi cancelado com sucesso`);
+        await this.loadTicketData();
+        await this.loadLinkedDocument();
+        if (this.shouldUnlinkDocument) {
+          await this.destroyDocumentLink();
+        }
+
+        this.renderInterface();
       }
     } catch (error) {
       console.log("Erro ao cancelar documento:", error);
-      await this._showError("Ocorreu uma falha ao tentar cancelar o documento");
+      await this.notifyError("Ocorreu uma falha ao tentar cancelar o documento");
     }
   }
 
-  async _showError(message) {
+  async destroyDocumentLink() {
+    if (!this.document) return;
+
+    const deletion = await this.client.db.delete(this.documentKey);
+
+    if (deletion?.Deleted) {
+      this.document = null;
+      console.log("Vínculo removido do DB com sucesso.");
+    } else {
+      console.log("Falha ao remover vínculo do DB.");
+    }
+  }
+
+  /***********************************
+   * Renderização de interface
+   ***********************************/
+  renderInterface() {
+    const state = this.documentUIState;
+
+    const loader = document.getElementById("initialLoader");
+    const controls = document.getElementById("documentControls");
+    const cancelButton = document.getElementById("cancelButton");
+    const statusContainer = document.getElementById("documentStatus");
+
+    const newButton = document.getElementById("newDocumentButton");
+    const editButton = document.getElementById("editDocumentButton");
+    const watchButton = document.getElementById("watchDocumentButton");
+
+    if (loader) loader.remove();
+    controls.style.display = "flex";
+
+    newButton.style.display = "none";
+    editButton.style.display = "none";
+    watchButton.style.display = "none";
+    cancelButton.style.display = "none";
+    statusContainer.style.display = "none";
+
+    switch (state) {
+      case AppUIState.NEW:
+        newButton.style.display = "inline-block";
+        break;
+
+      case AppUIState.DRAFT:
+        editButton.style.display = "inline-block";
+        cancelButton.style.display = "inline-block";
+        statusContainer.style.display = "block";
+        statusContainer.innerText = this.document?.statusName ?? "indefinido";
+        break;
+
+      case AppUIState.READY:
+      case AppUIState.SIGNING:
+      case AppUIState.DONE:
+        watchButton.style.display = "inline-block";
+        cancelButton.style.display = state === AppUIState.DONE ? "none" : "inline-block";
+        statusContainer.style.display = "block";
+        statusContainer.innerText = this.document?.statusName ?? "indefinido";
+        break;
+
+      default:
+        console.warn("Estado de interface desconhecido:", state);
+        newButton.style.display = "none";
+        editButton.style.display = "none";
+        watchButton.style.display = "none";
+        cancelButton.style.display = "none";
+        statusContainer.style.display = "none";
+        if (errorMessage) {
+          errorMessage.style.display = "block";
+        }
+    }
+  }
+
+  /***********************************
+   * Utilitários
+   ***********************************/
+  get documentKey() {
+    return `ticket:${this.ticket.display_id}`;
+  }
+
+  get shouldUnlinkDocument() {
+    return this.document?.statusId === "6";
+  }
+
+  get documentUIState() {
+    if (!this.document) return AppUIState.NEW;
+    if (this.documentLoadFailed) return AppUIState.UNKNOWN;
+
+    switch (this.document.statusId) {
+      case "2":
+        return AppUIState.DRAFT;
+      case "3":
+        return AppUIState.READY;
+      case "4":
+      case "5":
+        return AppUIState.SIGNING;
+      case "7":
+        return AppUIState.DONE;
+      default:
+        return AppUIState.UNKNOWN;
+    }
+  }
+
+  async notifyError(message) {
     await this.client.interface.trigger("showNotify", {
       type: "error",
       message
     });
   }
 
-  async _showSuccess(message) {
+  async notifySuccess(message) {
     await this.client.interface.trigger("showNotify", {
       type: "success",
       message
     });
   }
-
-  /**
-   * Carrega os dados e atualiza a interface com base no estado atual do ticket/documento.
-   */
-  async _loadAndRenderState() {
-    await this._loadTicketData();
-    await this._loadDocument();
-
-    requestAnimationFrame(() => {
-      this._renderUIBasedOnDocument();
-    });
-  }
-
-  _renderUIBasedOnDocument() {
-    const loader = document.getElementById("initialLoader");
-    const controls = document.getElementById("documentControls");
-    const actionButton = document.getElementById("actionButton");
-    const cancelButton = document.getElementById("cancelButton");
-    const statusContainer = document.getElementById("documentStatus");
-
-    if (loader) loader.remove();
-    controls.style.display = "flex";
-
-    if (!this.document) {
-      actionButton.innerHTML = `
-        <fw-icon name="upload" size="16" slot="before-label"></fw-icon>
-        Novo Documento
-      `;
-      cancelButton.style.display = "none";
-      statusContainer.style.display = "none";
-      return;
-    }
-
-    cancelButton.style.display = "inline-block";
-    statusContainer.style.display = "block";
-    statusContainer.innerText = `${this.document.statusName}`;
-
-    switch (this.document.statusId) {
-      case "2":
-        actionButton.innerHTML = `
-          <fw-icon name="link" size="16" slot="before-label"></fw-icon>
-          Definir Signatários
-        `;
-        break;
-
-      case "3":
-        actionButton.innerHTML = `
-          <fw-icon name="file-text" size="16" slot="before-label"></fw-icon>
-          Visualizar Documento
-        `;
-        break;
-
-      default:
-        actionButton.innerHTML = `
-          <fw-icon name="file-text" size="16" slot="before-label"></fw-icon>
-          Detalhes do Documento
-        `;
-        break;
-    }
-  }
 }
 
 /**
- * Inicialização da aplicação index.
+ * Utilitário para loading em botões
+ */
+function setLoading(button, isLoading) {
+  if (!button) return;
+  isLoading
+    ? button.setAttribute("loading", true)
+    : button.removeAttribute("loading");
+}
+
+/**
+ * Inicialização e eventos da aplicação
  */
 (async () => {
-  const fresh4sign = new App();
-  await fresh4sign.init();
+  const app = new App();
+  await app.initializeClient();
+
+  bindEventListeners(app);
 })();
+
+function bindEventListeners(app) {
+  app.client.events.on("app.activated", async () => {
+    await app.loadTicketData();
+    await app.loadLinkedDocument();
+
+    if (app.shouldUnlinkDocument) {
+      await app.destroyDocumentLink();
+    }
+
+    app.renderInterface();
+  });
+
+  document.getElementById("reloadButton").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    setLoading(button, true);
+
+    await app.loadTicketData();
+    await app.loadLinkedDocument();
+
+    if (app.shouldUnlinkDocument) {
+      await app.destroyDocumentLink();
+    }
+
+    app.renderInterface();
+    setLoading(button, false);
+  });
+
+  document.getElementById("newDocumentButton").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    setLoading(button, true);
+
+    await app.openModal("newDocument", { ticket: app.ticket });
+
+    setLoading(button, false);
+  });
+
+  document.getElementById("editDocumentButton").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    setLoading(button, true);
+
+    await app.openModal("draftDocument", { document: app.document });
+
+    setLoading(button, false);
+  });
+
+  document.getElementById("watchDocumentButton").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    setLoading(button, true);
+
+    await app.openModal("trackDocument", { document: app.document });
+
+    setLoading(button, false);
+  });
+
+  document.getElementById("cancelButton").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    setLoading(button, true);
+    await app.cancelDocument();
+    setLoading(button, false);
+  });
+
+  app.client.instance.receive(async (event) => {
+    console.log("Evento recebido:", event);
+
+    if (event.data === "DOCUMENT_CREATED") {
+      await app.loadTicketData();
+      await app.loadLinkedDocument();
+
+      if (app.shouldUnlinkDocument) {
+        await app.destroyDocumentLink();
+      }
+
+      app.renderInterface();
+      await app.openModal("defineSigners", { document: app.document });
+    }
+  });
+}

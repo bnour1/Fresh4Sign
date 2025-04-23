@@ -31,7 +31,9 @@
 
       <!-- Container dos botões e status (inicialmente oculto) -->
       <div id="documentControls" class="fw-flex fw-flex-column fw-gap-2" style="display: none;">
-        <fw-button id="actionButton" color="secondary"></fw-button>
+        <fw-button id="newDocumentButton" color="secondary">Novo Documento</fw-button>
+        <fw-button id="editDocumentButton" color="secondary">Continuar Documento</fw-button>
+        <fw-button id="watchDocumentButton" color="secondary">Acompanhar Documento</fw-button>
 
         <fw-button id="cancelButton" color="danger" class="fw-mt-4">
           <fw-icon name="cross-big" size="16" slot="before-label"></fw-icon>
@@ -40,6 +42,7 @@
       </div>
     </div>
   </div>
+  <div id="error-message" display="none"></div>
 </body>
 
 

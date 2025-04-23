@@ -72,5 +72,15 @@ exports = {
         } catch (e) {
             renderData({ status: 500, message: e.message });
         }
+    },
+    onAppInstallHandler: async function () {
+        const url = await generateTargetUrl()
+        console.log(url)
+        renderData()
+    },
+    onExternalEventHandler: function (payload) {
+        console.log("Logging arguments from the event:" + JSON.stringify(payload));
+        renderData()
     }
+
 };
