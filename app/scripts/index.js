@@ -17,7 +17,8 @@ class App {
     this.ticket = null;
     this.document = null;
     this.documentLoadFailed = false;
-
+    this.entityManager = null;
+    this.storageEntity = null
   }
 
   /***********************************
@@ -26,6 +27,8 @@ class App {
   async initializeClient() {
     try {
       this.client = await app.initialized();
+      this.entityManager = await this.client.db.entity({ version: "v1" });
+      this.storageEntity = await this.entityManager.get("ticketDocumentMapper");
     } catch (error) {
       console.log("Erro ao carregar client:", error);
       await this.notifyError("Erro ao carregar client");
@@ -298,7 +301,6 @@ function bindEventListeners(app) {
   document.getElementById("newDocumentButton").addEventListener("click", async (e) => {
     const button = e.currentTarget;
     setLoading(button, true);
-
     await app.openModal("newDocument", { ticket: app.ticket });
 
     setLoading(button, false);

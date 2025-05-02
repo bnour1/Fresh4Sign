@@ -20,16 +20,25 @@
 
 <body>
     <section>
-        <div id="form-document" class="fw-pr-28">
-        </div>
-        <div class="fw-card-1">
-            <fw-drag-container class="drag-container" id="attachmentsSort">
-            </fw-drag-container>
-        </div>
-        <br>
-        <div class="fw-justify-end fw-flex">
+        <fw-radio-group id="fw-radio-group">
+            <fw-radio value="create" id="newDocumentRadio" description="Criar e vincular um novo documento">Novo
+                Documento</fw-radio>
+            <fw-radio value="link" id="existingDocumentRadio"
+                description="Realizar vínculo apartir de documento existente">Vincular um
+                documento
+                existente</fw-radio>
+        </fw-radio-group>
+        <div hidden id="form-new-document" class="fw-pr-28">
+            <div class="fw-card-1">
+                <fw-drag-container class="drag-container" id="attachmentsSort">
+                </fw-drag-container>
+            </div>
+            <br>
             <fw-button color="secondary" class="fw-px-12" id="form-document-reset">Limpar</fw-button>
-            <fw-button id="form-document-submit">Criar Documento</fw-button>
+            <fw-button id="form-newDocument-submit">Criar Documento</fw-button>
+        </div>
+        <div hidden id="form-link-document" class="fw-pr-28">
+            <fw-button id="form-linkDocument-submit">Vincular Documento</fw-button>
         </div>
         <br>
         <div id="user_logs"></div>

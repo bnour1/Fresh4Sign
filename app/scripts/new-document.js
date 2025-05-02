@@ -16,6 +16,10 @@ class NewDocumentApp {
         this.ticket = null;
         /** Componente <fw-form> gerado dinamicamente */
         this.docForm = null;
+        /** Componente <fw-form> gerado dinamicamente */
+        this.linkForm = null;
+        this.entityManager = null
+        this.storageEntity = null
     }
 
     /***********************************
@@ -24,6 +28,8 @@ class NewDocumentApp {
     async initializeClient() {
         try {
             this.client = await app.initialized();
+            this.entityManager = await this.client.db.entity({ version: "v1" });
+            this.storageEntity = await this.entityManager.get("ticketDocumentMapper");
         } catch (error) {
             console.log("Erro ao carregar client:", error);
             await this.notifyError("Erro ao carregar client");
@@ -66,9 +72,11 @@ class NewDocumentApp {
         }
     }
 
-    async setupForm() {
-        this.docForm = await this.createDocumentForm();
-        document.querySelector("#form-document").prepend(this.docForm);
+    async setupForms() {
+        this.docForm = await this.createNewDocumentSubForm();
+        this.linkForm = this.createLinkDocumentSubForm();
+        document.querySelector("#form-new-document").prepend(this.docForm);
+        document.querySelector("#form-link-document").prepend(this.linkForm);
     }
 
     /** Pipeline de boot da tela */
@@ -82,13 +90,25 @@ class NewDocumentApp {
             await this.notifyError(err.message);
         }
 
-        await this.setupForm();
+        await this.setupForms();
+    }
+
+    toggleFormByRadioSelection(event) {
+        const selected = event.detail.value;
+        if (selected === "create") {
+            document.querySelector("#form-new-document").hidden = false
+            document.querySelector("#form-link-document").hidden = true
+        } else if (selected === "link") {
+            console.log("oi")
+            document.querySelector("#form-new-document").hidden = true
+            document.querySelector("#form-link-document").hidden = false
+        }
     }
 
     /***********************************
-     * Criação do formulário
+     * Formulário para criar novo documento
      ***********************************/
-    async createDocumentForm() {
+    async createNewDocumentSubForm() {
         const form = document.createElement("fw-form");
 
         const schema = {
@@ -147,6 +167,43 @@ class NewDocumentApp {
 
         return form;
     }
+
+    /***********************************
+     * Formulário para vincular documento existente
+     ***********************************/
+    createLinkDocumentSubForm() {
+        const form = document.createElement("fw-form");
+
+        const schema = {
+            name: "Link Existing Document Form",
+            fields: [
+                {
+                    id: "document_uuid",
+                    name: "document_uuid",
+                    label: "ID do Documento",
+                    type: "TEXT",
+                    position: 1,
+                    required: true,
+                    placeholder: "Insira o ID do documento já existente",
+                },
+            ],
+        };
+
+        const initialValues = {
+            document_uuid: "",
+        };
+
+        const validationSchema = Yup.object().shape({
+            document_uuid: Yup.string().required("ID do documento é obrigatório"),
+        });
+
+        form.formSchema = schema;
+        form.initialValues = initialValues;
+        form.validationSchema = validationSchema;
+
+        return form;
+    }
+
 
     /***********************************
      * Manipulação de formulário
@@ -212,6 +269,20 @@ class NewDocumentApp {
                 }
                 this.client.instance.close();
             }
+        } catch (error) {
+            console.error("Erro no envio:", error);
+            await this.notifyError(error.message || "Erro inesperado", "Erro ao enviar documento");
+        }
+    }
+
+    async linkDocument(e) {
+        try {
+            const { values, isValid } = await this.linkForm.doSubmit(e);
+            if (!isValid) return;
+            let data = await this.storageEntity.create({ ticket_id: this.ticket.display_id, document_uuid: values.document_uuid })
+            console.log(data)
+            this.client.instance.close();
+
         } catch (error) {
             console.error("Erro no envio:", error);
             await this.notifyError(error.message || "Erro inesperado", "Erro ao enviar documento");
@@ -309,6 +380,16 @@ class NewDocumentApp {
         this.docForm.doReset(e);
     }
 
+    radioGroupSelectHandler(e) {
+        if (e.detail.value === "newDocument") {
+            this.docForm.hidden = false
+        }
+
+        if (e.detail.value === "existingDocument") {
+            this.docForm.hidden = true
+        }
+    }
+
     /***********************************
      * Utilitários
      ***********************************/
@@ -371,15 +452,25 @@ function bindEventListeners(app) {
     app.docForm.addEventListener("fwFormValueChanged", (evt) => app.handleDocumentFormChange(evt));
 
     // Enviar documento
-    document.getElementById("form-document-submit").addEventListener("click", async (e) => {
+    document.getElementById("form-newDocument-submit").addEventListener("click", async (e) => {
         const btn = e.currentTarget;
         setLoading(btn, true);
         await app.submitDocument(e);
         setLoading(btn, false);
     });
 
+    // Vincular documento
+    document.getElementById("form-linkDocument-submit").addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        setLoading(btn, true);
+        await app.linkDocument(e);
+        setLoading(btn, false);
+    });
+
     // Resetar formulário
     document.getElementById("form-document-reset").addEventListener("click", (e) => app.resetDocument(e));
+
+    document.getElementById("fw-radio-group").addEventListener("fwChange", (e) => app.toggleFormByRadioSelection(e));
 }
 
 /***********************************

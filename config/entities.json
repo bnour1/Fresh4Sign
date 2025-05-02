@@ -1,0 +1,20 @@
+{
+    "ticketDocumentMapper": {
+        "fields": [
+            {
+                "name": "ticket_id",
+                "label": "Ticket ID",
+                "type": "integer",
+                "filterable": true,
+                "required": true
+            },
+            {
+                "name": "document_uuid",
+                "label": "Document ID",
+                "type": "text",
+                "filterable": true,
+                "required": true
+            }
+        ]
+    }
+}
