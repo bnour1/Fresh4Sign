@@ -29,7 +29,7 @@ class NewDocumentApp {
         try {
             this.client = await app.initialized();
             this.entityManager = await this.client.db.entity({ version: "v1" });
-            this.storageEntity = await this.entityManager.get("ticketDocumentMapper");
+            this.storageEntity = await this.entityManager.get("ticketDocumentMap");
         } catch (error) {
             console.log("Erro ao carregar client:", error);
             await this.notifyError("Erro ao carregar client");
@@ -267,7 +267,7 @@ class NewDocumentApp {
                 } catch (err) {
                     console.error(err);
                 }
-                this.client.instance.close();
+                await this.client.instance.close();
             }
         } catch (error) {
             console.error("Erro no envio:", error);
@@ -280,8 +280,15 @@ class NewDocumentApp {
             const { values, isValid } = await this.linkForm.doSubmit(e);
             if (!isValid) return;
             let data = await this.storageEntity.create({ ticket_id: this.ticket.display_id, document_uuid: values.document_uuid })
+            let list = await this.storageEntity.getAll();
             console.log(data)
-            this.client.instance.close();
+            console.log(list)
+            try {
+                await this.client.instance.send({ message: "DOCUMENT_LINKED" });
+            } catch (err) {
+                console.error(err);
+            }
+            await this.client.instance.close();
 
         } catch (error) {
             console.error("Erro no envio:", error);

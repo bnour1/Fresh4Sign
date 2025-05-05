@@ -28,7 +28,7 @@ class App {
     try {
       this.client = await app.initialized();
       this.entityManager = await this.client.db.entity({ version: "v1" });
-      this.storageEntity = await this.entityManager.get("ticketDocumentMapper");
+      this.storageEntity = await this.entityManager.get("ticketDocumentMap");
     } catch (error) {
       console.log("Erro ao carregar client:", error);
       await this.notifyError("Erro ao carregar client");
@@ -343,7 +343,9 @@ function bindEventListeners(app) {
       }
 
       app.renderInterface();
-      await app.openModal("defineSigners", { document: app.document });
+      await app.openModal("draftDocument", { document: app.document });
+    } else if (event.data === "DOCUMENT_LINKED") {
+      console.log(event)
     }
   });
 }

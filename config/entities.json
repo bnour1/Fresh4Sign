@@ -1,5 +1,5 @@
 {
-    "ticketDocumentMapper": {
+    "ticketDocumentMap": {
         "fields": [
             {
                 "name": "ticket_id",
