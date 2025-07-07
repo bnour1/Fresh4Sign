@@ -35,5 +35,10 @@
         "display_name": "UUID Cofre (D4Sign)",
         "description": "UUID do Cofre da D4Sign",
         "required": true
+    },
+    "enableAgentAsApproverShortcut": {
+        "type": "checkbox",
+        "display_name": "Ativar botão para adicionar agente como aprovador",
+        "description": "Mostra um botão que preenche automaticamente os dados do agente logado no formulário de aprovadores."
     }
 }

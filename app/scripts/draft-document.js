@@ -10,7 +10,6 @@
 class DraftDocumentController {
     constructor(client) {
         this.client = client;
-
         this.context = null;
         this.agent = null;
         this.document = null
@@ -20,8 +19,12 @@ class DraftDocumentController {
     }
 
     async loadAgentData() {
-        const { agent } = await this.client.data.get("agent");
-        return agent?.user ?? agent;
+        try {
+            const { agent } = await this.client.data.get("agent");
+            return agent.user
+        } catch (e) {
+            return null
+        }
     }
 
     async loadSigners() {
@@ -48,8 +51,16 @@ class DraftDocumentController {
             this.createSignatoriesForm()
             this.createSignatoriesTable();
             this.populateSignatoriesTable();
+
+            const iparams = await this.client.iparams.get()
+            console.log(iparams)
+
+            if (iparams.enableAgentAsApproverShortcut) {
+                console.log("oi")
+                this.injectAddAgentApproverButton();
+            }
         } catch (err) {
-            console.error(err);
+            console.log(err);
             await this.notifyError(err.message || "Falha de inicialização");
         }
     }
@@ -77,7 +88,7 @@ class DraftDocumentController {
             name: "Signatarios Form",
             fields: [
                 { id: "signatory_name", name: "signatory_name", label: "Nome", type: "TEXT", required: true },
-                { id: "signatory_cpf", name: "signatory_cpf", label: "CPF", type: "TEXT", required: true },
+                { id: "signatory_cpf", name: "signatory_cpf", label: "CPF", type: "TEXT", required: false },
                 { id: "signatory_email", name: "signatory_email", label: "E‑mail", type: "EMAIL", required: true },
                 { id: "signatory_type", name: "signatory_type", label: "Ação", type: "DROPDOWN", required: true, choices: SIGNATORY_TYPE_CHOICES },
                 { id: "signature_type", name: "signature_type", label: "Assinatura", type: "DROPDOWN", required: true, choices: SIGNATURE_TYPE_CHOICES },
@@ -88,7 +99,10 @@ class DraftDocumentController {
 
         const validationSchema = Yup.object().shape({
             signatory_name: Yup.string().required("Nome é obrigatório"),
-            signatory_cpf: Yup.string().required("CPF é obrigatório").test("len", "CPF deve ter 11 dígitos", (v) => (v || "").replace(/\D/g, "").length === 11),
+            signatory_cpf: Yup.string().test("len", "CPF deve ter 11 dígitos", (v) => {
+                if (!v) return true; // permite vazio
+                return v.replace(/\D/g, "").length === 11;
+            }),
             signatory_email: Yup.string().email("E‑mail inválido").required("E‑mail é obrigatório"),
             signatory_type: Yup.string().required("Ação é obrigatória"),
             signature_type: Yup.string().required("Tipo de assinatura é obrigatório"),
@@ -212,6 +226,30 @@ class DraftDocumentController {
             this.signForm.setHiddenFields({ signature_certificate: value !== "Certificado" });
         }
     }
+
+    injectAddAgentApproverButton() {
+        const container = document.createElement("div");
+        container.style.margin = "12px 0";
+
+        const btn = document.createElement("fw-button");
+        btn.setAttribute("color", "secondary");
+        btn.setAttribute("size", "small");
+        btn.textContent = "Adicionar agente como aprovador";
+
+        btn.onclick = () => {
+            if (!this.agent || !this.signForm) return;
+
+            this.signForm.setFieldValue("signatory_name", this.agent.name || "");
+            this.signForm.setFieldValue("signatory_email", this.agent.email || "");
+            this.signForm.setFieldValue("signatory_type", "2"); // 2 = Aprovar
+            this.signForm.setFieldValue("signature_type", "Normal");
+            this.signForm.setFieldValue("signatory_order", this.signers.length + 1 || 1);
+        };
+
+        container.appendChild(btn);
+        this.signForm.parentNode.insertBefore(container, this.signForm.nextSibling);
+    }
+
 
     async addSignatory(e) {
         const { values, isValid } = await this.signForm.doSubmit(e);

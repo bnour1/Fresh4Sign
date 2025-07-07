@@ -267,7 +267,7 @@ function setLoading(button, isLoading) {
 (async () => {
   const app = new App();
   await app.initializeClient();
-
+""
   bindEventListeners(app);
 })();
 
